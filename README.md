@@ -21,9 +21,9 @@ cp .env.example .env
 docker compose up --build
 ```
 
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:5150
 - API: http://localhost:3333/api — documentação em http://localhost:3333/docs
-- PostgreSQL: `localhost:5432` (usuário/senha em `.env`)
+- PostgreSQL: `localhost:5441` (usuário/senha em `.env`)
 
 Popular com dados de exemplo (admin@flowboard.local / admin123):
 
@@ -50,7 +50,7 @@ npm --prefix mcp run build
 
 **2. Gere um API token**
 
-Entre em http://localhost:5173 (ex.: `admin@flowboard.local` / `admin123`) e vá em **Configurações → API tokens**.
+Entre em http://localhost:5150 (ex.: `admin@flowboard.local` / `admin123`) e vá em **Configurações → API tokens**.
 Escolha **Claude Agent**, crie um token (ex.: "Claude Code") e copie o valor `fb_...`. Ele só é exibido uma vez.
 As ações feitas com esse token aparecem no histórico em nome do Claude Agent, com o selo **agente**. Se preferir
 que as ações saiam em seu nome, crie o token em "Seus tokens".

@@ -9,6 +9,6 @@ RUN npm ci
 
 COPY --chown=node:node . .
 
-EXPOSE 5173
+EXPOSE 5150
 
 CMD ["npm", "run", "dev"]
