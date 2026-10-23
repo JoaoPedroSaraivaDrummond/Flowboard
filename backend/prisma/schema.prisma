@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  human
+  agent
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  /// Agents (e.g. Claude Code) have an unusable hash: they authenticate only with API tokens.
+  passwordHash String
+  type         UserType @default(human)
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  apiTokens          ApiToken[]
+  boards             Board[]
+  assignedCards      Card[]     @relation("CardAssignee")
+  comments           Comment[]
+  activities         Activity[]
+  listsAutoAssigning List[]     @relation("ListOnEnterAssignee")
+}
+
+/// Long-lived tokens for agents (e.g. Claude Code). Only the SHA-256 hash is stored.
+model ApiToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  name       String
+  tokenHash  String    @unique
+  userId     String    @db.Uuid
+  lastUsedAt DateTime? @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Board {
+  id          String    @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  createdById String    @db.Uuid
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+  archivedAt  DateTime? @db.Timestamptz(6)
+
+  createdBy    User           @relation(fields: [createdById], references: [id])
+  lists        List[]
+  labels       Label[]
+  activities   Activity[]
+  customFields CustomField[]
+  templates    CardTemplate[]
+}
+
+model List {
+  id         String    @id @default(uuid()) @db.Uuid
+  boardId    String    @db.Uuid
+  title      String
+  position   Float
+  archivedAt DateTime? @db.Timestamptz(6)
+
+  /// Max active cards; moves/creates beyond it are rejected (null = unlimited).
+  wipLimit          Int?
+  /// Automations applied when a card enters the list (created in it or moved into it).
+  onEnterMarkDone   Boolean @default(false)
+  onEnterAssigneeId String? @db.Uuid
+  onEnterLabelId    String? @db.Uuid
+
+  board           Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards           Card[]
+  onEnterAssignee User?  @relation("ListOnEnterAssignee", fields: [onEnterAssigneeId], references: [id], onDelete: SetNull)
+  onEnterLabel    Label? @relation("ListOnEnterLabel", fields: [onEnterLabelId], references: [id], onDelete: SetNull)
+
+  @@index([boardId, position])
+}
+
+model Card {
+  id          String    @id @default(uuid()) @db.Uuid
+  listId      String    @db.Uuid
+  title       String
+  /// Markdown
+  description String?
+  position    Float
+  dueDate     DateTime? @db.Timestamptz(6)
+  assigneeId  String?   @db.Uuid
+  /// Set by the user or by a list's "mark as done" automation.
+  completedAt DateTime? @db.Timestamptz(6)
+  archivedAt  DateTime? @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+
+  list              List                   @relation(fields: [listId], references: [id], onDelete: Cascade)
+  assignee          User?                  @relation("CardAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  labels            Label[]
+  comments          Comment[]
+  checklistItems    ChecklistItem[]
+  activities        Activity[]
+  customFieldValues CardCustomFieldValue[]
+
+  @@index([listId, position])
+  @@index([assigneeId])
+}
+
+model Label {
+  id      String @id @default(uuid()) @db.Uuid
+  boardId String @db.Uuid
+  name    String
+  color   String
+
+  board             Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards             Card[]
+  listsAutoLabeling List[] @relation("ListOnEnterLabel")
+
+  @@index([boardId])
+}
+
+model Comment {
+  id        String   @id @default(uuid()) @db.Uuid
+  cardId    String   @db.Uuid
+  authorId  String   @db.Uuid
+  body      String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  card   Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([cardId, createdAt])
+}
+
+model ChecklistItem {
+  id       String  @id @default(uuid()) @db.Uuid
+  cardId   String  @db.Uuid
+  text     String
+  done     Boolean @default(false)
+  position Float
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId, position])
+}
+
+model Activity {
+  id        String   @id @default(uuid()) @db.Uuid
+  boardId   String   @db.Uuid
+  cardId    String?  @db.Uuid
+  actorId   String   @db.Uuid
+  /// e.g. "card.created", "card.moved"
+  type      String
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  card  Card? @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  actor User  @relation(fields: [actorId], references: [id])
+
+  @@index([boardId, createdAt])
+  @@index([cardId])
+}
+
+enum CustomFieldType {
+  text
+  number
+  select
+  url
+}
+
+/// Board-level field definition (e.g. "PR" url, "Branch" text, "Prioridade" select).
+model CustomField {
+  id       String          @id @default(uuid()) @db.Uuid
+  boardId  String          @db.Uuid
+  name     String
+  type     CustomFieldType
+  /// Allowed values for `select` fields.
+  options  String[]
+  position Float
+
+  board  Board                  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  values CardCustomFieldValue[]
+
+  @@unique([boardId, name])
+}
+
+/// Value stored as text, validated/normalized according to the field type.
+model CardCustomFieldValue {
+  cardId    String   @db.Uuid
+  fieldId   String   @db.Uuid
+  value     String
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  card  Card        @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  field CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, fieldId])
+  @@index([fieldId])
+}
+
+model CardTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  boardId     String   @db.Uuid
+  name        String
+  /// Markdown copied into the new card.
+  description String?
+  /// Checklist item texts copied into the new card, in order.
+  checklist   String[]
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, name])
+}

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+
+# Segredos e ambiente local
+.env
+.env.*
+!.env.example
+
+# Configuração pessoal do Claude Code
+.claude/settings.local.json

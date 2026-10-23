@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "flowboard": {
+      "type": "stdio",
+      "command": "sh",
+      "args": ["-c", "exec node \"$CLAUDE_PROJECT_DIR/mcp/dist/index.js\""],
+      "env": {
+        "FLOWBOARD_API_URL": "${FLOWBOARD_API_URL:-http://localhost:3333/api}",
+        "FLOWBOARD_TOKEN": "${FLOWBOARD_TOKEN}"
+      }
+    }
+  }
+}

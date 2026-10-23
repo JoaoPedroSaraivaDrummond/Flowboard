@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flowboard</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%230284c7%22/%3E%3Crect x=%226%22 y=%227%22 width=%228%22 height=%2218%22 rx=%222%22 fill=%22white%22/%3E%3Crect x=%2218%22 y=%227%22 width=%228%22 height=%2211%22 rx=%222%22 fill=%22white%22/%3E%3C/svg%3E"
+    />
+    <script>
+      // Apply the theme before first paint to avoid a light flash (mirrors src/lib/theme.tsx).
+      try {
+        var theme = localStorage.getItem('flowboard.theme');
+        var dark =
+          theme === 'dark' ||
+          (theme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
+      } catch (error) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
