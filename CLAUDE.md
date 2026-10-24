@@ -360,9 +360,22 @@ Concluído, a automação marca o card como concluído.
 ## Repositório
 
 - GitHub: `JoaoPedroSaraivaDrummond/Flowboard`, **PÚBLICO**. Tudo o que for commitado, inclusive o histórico, fica visível para qualquer pessoa.
-- Antes de cada commit, revise `git diff --cached`: nada de `.env`, tokens (`fb_...`), chaves, senhas reais, dados pessoais ou caminhos da máquina local.
+- Antes de cada commit, revise `git diff --cached`: não pode entrar nada de `.env`, tokens (`fb_...`), chaves, senhas reais, dados pessoais ou caminhos da máquina local.
 - Segredo commitado por engano precisa ser revogado e trocado. Apagar o arquivo depois não resolve.
-- Só faça commit ou push quando o usuário pedir.
+- **Commit e push liberados:** o Claude pode commitar e dar push sem pedir confirmação, sempre na `dev`. Como o repositório é público, a revisão do `git diff --cached` descrita acima é obrigatória antes de cada commit.
+- **Branches:** o desenvolvimento acontece na `dev`; nada vai direto para a `main`. A `dev` é a branch padrão no GitHub; a `main` só recebe merge da `dev` quando o usuário pedir. Os relatórios em `docs/security-audit/` estão no `.git/info/exclude` e nunca devem ser commitados.
+
+## Versionamento
+
+Segue o padrão **MAJOR.MINOR.PATCH** (ex.: `1.4.2`), comum a todos os projetos:
+
+- **MAJOR** (primeiro número): mudança incompatível com versões anteriores; quem usa o software pode precisar alterar o próprio código. Ex.: `1.4.2` → `2.0.0`.
+- **MINOR** (segundo número): funcionalidade nova sem quebrar o que já existia. Ex.: `1.4.2` → `1.5.0`.
+- **PATCH** (terceiro número): correção de bug que não muda o comportamento esperado nem adiciona recurso. Ex.: `1.4.2` → `1.4.3`.
+
+Ao subir um número, os da direita voltam a zero. A versão é atualizada no mesmo commit que traz a mudança, na `dev`. Mudança só de documentação não sobe versão.
+
+- Onde fica: campo `version` de `backend/package.json`, `frontend/package.json` e `mcp/package.json`, sempre com o mesmo número (hoje `0.1.0`).
 
 ## Auditoria de segurança (obrigatória a cada alteração)
 
