@@ -15,8 +15,14 @@ export function AppLayout() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-12 shrink-0 items-center gap-2 bg-sky-800 px-4 shadow dark:bg-slate-900 dark:shadow-black/40">
-        <Link to="/boards" className="mr-4 text-lg font-bold tracking-tight text-white">
+        <Link
+          to="/boards"
+          className="mr-4 flex items-baseline gap-1.5 text-lg font-bold tracking-tight text-white"
+        >
           Flowboard
+          <span className="text-xs font-normal tracking-normal text-sky-200 dark:text-slate-400">
+            v{import.meta.env.VITE_APP_VERSION}
+          </span>
         </Link>
         <NavLink to="/boards" end className={navClass}>
           Boards

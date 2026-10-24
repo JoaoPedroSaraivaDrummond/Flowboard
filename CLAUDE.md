@@ -375,7 +375,7 @@ Segue o padrão **MAJOR.MINOR.PATCH** (ex.: `1.4.2`), comum a todos os projetos:
 
 Ao subir um número, os da direita voltam a zero. A versão é atualizada no mesmo commit que traz a mudança, na `dev`. Mudança só de documentação não sobe versão.
 
-- Onde fica: campo `version` de `backend/package.json`, `frontend/package.json` e `mcp/package.json`, sempre com o mesmo número (hoje `0.1.0`).
+- Onde fica: campo `version` de `backend/package.json`, `frontend/package.json` e `mcp/package.json`, sempre com o mesmo número (hoje `0.2.0`), além de `SERVER_VERSION` em `mcp/src/server.ts` e da versão do OpenAPI em `backend/src/app.ts`. O `frontend/vite.config.ts` injeta essa versão em `import.meta.env.VITE_APP_VERSION`, que aparece ao lado do nome no cabeçalho (`components/AppLayout.tsx`); não escreva a versão à mão no código.
 
 ## Auditoria de segurança (obrigatória a cada alteração)
 

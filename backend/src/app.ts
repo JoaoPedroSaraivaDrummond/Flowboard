@@ -39,7 +39,7 @@ export async function buildApp() {
         title: 'Flowboard API',
         description:
           'Authenticate with `Authorization: Bearer <jwt>` (from /api/auth/login) or `Authorization: Bearer fb_<api token>`.',
-        version: '0.1.0',
+        version: '0.2.0',
       },
       components: {
         securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } },
