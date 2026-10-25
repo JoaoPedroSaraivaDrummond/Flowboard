@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+> **Projeto congelado.** O usuário deixou este projeto de lado por um tempo. Ele fica na pasta `Projetos_Congelados/` e não tem nenhum contato com os projetos ativos: nenhum deles usa este projeto (MCP, API, documentação) e este não aponta para eles. Não altere, rode nem commite nada aqui, a menos que o usuário peça para trabalhar neste projeto.
+
 Guia para o Claude Code (e humanos) trabalharem neste repositório.
 
 ## Visão geral
