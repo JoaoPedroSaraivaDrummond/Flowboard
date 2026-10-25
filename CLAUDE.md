@@ -367,6 +367,10 @@ Concluído, a automação marca o card como concluído.
 - Frontend: componentes React como funções nomeadas (named exports), estilos com classes Tailwind; chamadas HTTP concentradas em `src/lib/api.ts`; dados do servidor só via TanStack Query (sem copiar para `useState`, exceto rascunhos de edição).
 - Configuração sempre via variáveis de ambiente definidas em `.env` (nunca commitar o `.env`; atualizar o `.env.example` ao criar variáveis novas).
 
+## Conta de teste (login)
+
+Regra global de todos os projetos: quando a aplicação tem login ou cadastro, o Claude usa a conta **`admin@claude.local` / `admin123`** para entrar, testar e tirar prints. Se ela ainda não existir no banco de desenvolvimento, crie pelo cadastro da própria aplicação (ou pelo seed). A conta é só de desenvolvimento: nunca a crie nem a deixe ativa em produção.
+
 ## Repositório
 
 - GitHub: `JoaoPedroSaraivaDrummond/Flowboard`, **PÚBLICO**. Tudo o que for commitado, inclusive o histórico, fica visível para qualquer pessoa.
