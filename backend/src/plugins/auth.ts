@@ -5,6 +5,11 @@ import { prisma } from '../lib/prisma.js';
 
 export type AuthContext = {
   userId: string;
+  /**
+   * Whose board memberships apply to this request. Same as userId, except for agent tokens:
+   * an agent acts with the access of the human who minted its token.
+   */
+  accessUserId: string;
   method: 'jwt' | 'api_token';
   apiTokenId?: string;
 };
@@ -36,7 +41,12 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
     });
     if (!apiToken) throw unauthorized('Invalid API token');
     await prisma.apiToken.update({ where: { id: apiToken.id }, data: { lastUsedAt: new Date() } });
-    request.auth = { userId: apiToken.userId, method: 'api_token', apiTokenId: apiToken.id };
+    request.auth = {
+      userId: apiToken.userId,
+      accessUserId: apiToken.createdById ?? apiToken.userId,
+      method: 'api_token',
+      apiTokenId: apiToken.id,
+    };
     return;
   }
 
@@ -48,5 +58,5 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
   }
   const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { id: true } });
   if (!user) throw unauthorized('Invalid or expired token');
-  request.auth = { userId: user.id, method: 'jwt' };
+  request.auth = { userId: user.id, accessUserId: user.id, method: 'jwt' };
 }

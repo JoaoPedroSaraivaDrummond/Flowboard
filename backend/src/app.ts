@@ -11,6 +11,7 @@ import {
 import { env } from './env.js';
 import { registerErrorHandlers } from './errors.js';
 import { authenticate } from './plugins/auth.js';
+import { enforceBoardAccess } from './services/access.js';
 import { authRoutes } from './routes/auth.js';
 import { boardRoutes } from './routes/boards.js';
 import { cardRoutes } from './routes/cards.js';
@@ -39,7 +40,7 @@ export async function buildApp() {
         title: 'Flowboard API',
         description:
           'Authenticate with `Authorization: Bearer <jwt>` (from /api/auth/login) or `Authorization: Bearer fb_<api token>`.',
-        version: '0.2.0',
+        version: '0.3.0',
       },
       components: {
         securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } },
@@ -60,6 +61,8 @@ export async function buildApp() {
 
       await api.register(async (protectedApi) => {
         protectedApi.addHook('onRequest', authenticate);
+        // Board membership check for every board-scoped route (see services/access.ts)
+        protectedApi.addHook('preHandler', enforceBoardAccess);
         await protectedApi.register(tokenRoutes);
         await protectedApi.register(boardRoutes);
         await protectedApi.register(listRoutes);

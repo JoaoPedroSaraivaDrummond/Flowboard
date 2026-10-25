@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { notFound } from '../errors.js';
 import { prisma } from '../lib/prisma.js';
 import { publicUserSelect } from '../schemas/common.js';
+import { memberOf } from './access.js';
 import { recordActivity, type Tx } from './activity.js';
 import { byPosition } from './ordering.js';
 
@@ -20,17 +21,28 @@ export async function findBoardOrThrow(db: Tx, boardId: string) {
   return board;
 }
 
-export function listBoards(includeArchived: boolean) {
+export function listBoards(accessUserId: string, includeArchived: boolean) {
   return prisma.board.findMany({
-    where: includeArchived ? {} : { archivedAt: null },
+    where: { ...memberOf(accessUserId), ...(includeArchived ? {} : { archivedAt: null }) },
     orderBy: { createdAt: 'asc' },
     include: { createdBy: { select: publicUserSelect } },
   });
 }
 
-export function createBoard(actorId: string, data: { title: string; description?: string | null }) {
+/** `ownerId` is who gets access: the actor itself, or the human behind an agent token. */
+export function createBoard(
+  actorId: string,
+  data: { title: string; description?: string | null },
+  ownerId = actorId,
+) {
   return prisma.$transaction(async (tx) => {
-    const board = await tx.board.create({ data: { ...data, createdById: actorId } });
+    const board = await tx.board.create({
+      data: {
+        ...data,
+        createdById: actorId,
+        members: { create: { userId: ownerId, role: 'owner' } },
+      },
+    });
     await recordActivity(tx, {
       boardId: board.id,
       actorId,

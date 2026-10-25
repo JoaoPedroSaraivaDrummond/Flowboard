@@ -11,3 +11,6 @@ coverage/
 
 # Configuração pessoal do Claude Code
 .claude/settings.local.json
+
+# Relatórios de segurança e documentação local nunca vão para o git
+docs/

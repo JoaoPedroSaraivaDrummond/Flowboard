@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { publicUserSelect, type MoveTarget } from '../schemas/common.js';
 import { recordActivity, type Tx } from './activity.js';
 import { cardSummaryInclude, paginateActivity } from './boards.js';
+import { memberOf } from './access.js';
 import { findListOrThrow } from './lists.js';
 import { byPosition, placeAmongSiblings } from './ordering.js';
 import { enterList, lockList, assertWipCapacity } from './rules.js';
@@ -276,13 +277,21 @@ export function setCardLabel(actorId: string, cardId: string, labelId: string, a
   });
 }
 
-export function searchCards(query: string, options: { boardId?: string; limit: number }) {
+export function searchCards(
+  accessUserId: string,
+  query: string,
+  options: { boardId?: string; limit: number },
+) {
   return prisma.card.findMany({
     where: {
       archivedAt: null,
       list: {
         archivedAt: null,
-        board: { archivedAt: null, ...(options.boardId ? { id: options.boardId } : {}) },
+        board: {
+          archivedAt: null,
+          ...memberOf(accessUserId),
+          ...(options.boardId ? { id: options.boardId } : {}),
+        },
       },
       OR: [
         { title: { contains: query, mode: 'insensitive' } },

@@ -4,6 +4,8 @@ import type {
   AuthResponse,
   BoardDetail,
   BoardList,
+  BoardMember,
+  BoardRole,
   BoardSummary,
   CardDetail,
   CardFields,
@@ -99,6 +101,11 @@ export const api = {
   getBoard: (boardId: string) => request<BoardDetail>('GET', `/boards/${boardId}`),
   updateBoard: (boardId: string, data: { title?: string; description?: string | null }) =>
     request<BoardSummary>('PATCH', `/boards/${boardId}`, data),
+  listMembers: (boardId: string) => request<BoardMember[]>('GET', `/boards/${boardId}/members`),
+  addMember: (boardId: string, email: string, role: BoardRole) =>
+    request<BoardMember>('POST', `/boards/${boardId}/members`, { email, role }),
+  removeMember: (boardId: string, userId: string) =>
+    request<void>('DELETE', `/boards/${boardId}/members/${userId}`),
 
   createList: (boardId: string, title: string) =>
     request<BoardList>('POST', `/boards/${boardId}/lists`, { title }),

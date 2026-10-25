@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { FlowboardClient } from './client.js';
 import { registerTools } from './tools.js';
 
-export const SERVER_VERSION = '0.2.0';
+export const SERVER_VERSION = '0.3.0';
 
 const INSTRUCTIONS = `Flowboard is a Trello-like board (boards → lists → cards).
 Typical flow: list_boards → get_board (shows lists and cards with ids) → get_card / create_card / move_card / update_card.

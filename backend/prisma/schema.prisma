@@ -22,7 +22,9 @@ model User {
   createdAt    DateTime @default(now()) @db.Timestamptz(6)
 
   apiTokens          ApiToken[]
+  createdApiTokens   ApiToken[] @relation("ApiTokenCreatedBy")
   boards             Board[]
+  boardMemberships   BoardMember[]
   assignedCards      Card[]     @relation("CardAssignee")
   comments           Comment[]
   activities         Activity[]
@@ -35,12 +37,16 @@ model ApiToken {
   name       String
   tokenHash  String    @unique
   userId     String    @db.Uuid
+  /// Human who minted the token. An agent token acts with this human's board access.
+  createdById String?  @db.Uuid
   lastUsedAt DateTime? @db.Timestamptz(6)
   createdAt  DateTime  @default(now()) @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("ApiTokenCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([createdById])
 }
 
 model Board {
@@ -53,6 +59,7 @@ model Board {
   archivedAt  DateTime? @db.Timestamptz(6)
 
   createdBy    User           @relation(fields: [createdById], references: [id])
+  members      BoardMember[]
   lists        List[]
   labels       Label[]
   activities   Activity[]
@@ -215,4 +222,23 @@ model CardTemplate {
   board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
   @@unique([boardId, name])
+}
+
+enum BoardRole {
+  owner
+  member
+}
+
+/// Who can see and change a board. Every board-scoped route checks this table.
+model BoardMember {
+  boardId   String    @db.Uuid
+  userId    String    @db.Uuid
+  role      BoardRole @default(member)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([boardId, userId])
+  @@index([userId])
 }

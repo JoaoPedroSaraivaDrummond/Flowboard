@@ -10,6 +10,10 @@ export type User = {
 
 export type AuthResponse = { user: User; token: string };
 
+export type BoardRole = 'owner' | 'member';
+
+export type BoardMember = { role: BoardRole; createdAt: string; user: User };
+
 export type LabelRef = { id: string; name: string; color: string };
 export type Label = LabelRef & { boardId: string };
 

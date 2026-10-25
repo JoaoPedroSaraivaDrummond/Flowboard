@@ -29,8 +29,19 @@ export async function getUser(userId: string) {
   return user;
 }
 
-export function listUsers() {
-  return prisma.user.findMany({ select: publicUserSelect, orderBy: { name: 'asc' } });
+/** People who share a board with the user, plus agents (they can be assigned anywhere). */
+export function listUsers(accessUserId: string) {
+  return prisma.user.findMany({
+    where: {
+      OR: [
+        { type: 'agent' },
+        { boardMemberships: { some: { board: { members: { some: { userId: accessUserId } } } } } },
+        { id: accessUserId },
+      ],
+    },
+    select: publicUserSelect,
+    orderBy: { name: 'asc' },
+  });
 }
 
 const apiTokenSelect = {
@@ -43,7 +54,8 @@ const apiTokenSelect = {
 
 /**
  * Tokens can belong to the requester or — when the requester is human — to an agent user
- * (agents can't log in, so humans mint and revoke their tokens).
+ * (agents can't log in, so humans mint and revoke their tokens). An agent token acts with the
+ * board access of the human who created it, so each human only sees the agent tokens they made.
  */
 async function assertCanManageTokensOf(requesterId: string, ownerId: string) {
   if (requesterId === ownerId) return;
@@ -57,27 +69,45 @@ async function assertCanManageTokensOf(requesterId: string, ownerId: string) {
   }
 }
 
-export async function listApiTokens(requesterId: string, ownerId = requesterId) {
+async function isAgent(userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { type: true } });
+  return user?.type === 'agent';
+}
+
+export async function listApiTokens(
+  requesterId: string,
+  accessUserId: string,
+  ownerId = requesterId,
+) {
   await assertCanManageTokensOf(requesterId, ownerId);
   return prisma.apiToken.findMany({
-    where: { userId: ownerId },
+    where: { userId: ownerId, ...((await isAgent(ownerId)) ? { createdById: accessUserId } : {}) },
     select: apiTokenSelect,
     orderBy: { createdAt: 'desc' },
   });
 }
 
 /** Returns the plain token; it is never retrievable again. */
-export async function createApiToken(requesterId: string, name: string, ownerId = requesterId) {
+export async function createApiToken(
+  requesterId: string,
+  accessUserId: string,
+  name: string,
+  ownerId = requesterId,
+) {
   await assertCanManageTokensOf(requesterId, ownerId);
   const plainToken = generateApiToken();
   const apiToken = await prisma.apiToken.create({
-    data: { userId: ownerId, name, tokenHash: hashApiToken(plainToken) },
+    data: { userId: ownerId, createdById: accessUserId, name, tokenHash: hashApiToken(plainToken) },
     select: apiTokenSelect,
   });
   return { ...apiToken, token: plainToken };
 }
 
-async function findManageableTokenOrThrow(requesterId: string, tokenId: string) {
+async function findManageableTokenOrThrow(
+  requesterId: string,
+  accessUserId: string,
+  tokenId: string,
+) {
   const apiToken = await prisma.apiToken.findUnique({ where: { id: tokenId } });
   if (!apiToken) throw notFound('API token');
   try {
@@ -86,15 +116,23 @@ async function findManageableTokenOrThrow(requesterId: string, tokenId: string) 
     // Don't reveal tokens the requester can't manage.
     throw notFound('API token');
   }
+  if ((await isAgent(apiToken.userId)) && apiToken.createdById !== accessUserId) {
+    throw notFound('API token');
+  }
   return apiToken;
 }
 
-export async function renameApiToken(requesterId: string, tokenId: string, name: string) {
-  await findManageableTokenOrThrow(requesterId, tokenId);
+export async function renameApiToken(
+  requesterId: string,
+  accessUserId: string,
+  tokenId: string,
+  name: string,
+) {
+  await findManageableTokenOrThrow(requesterId, accessUserId, tokenId);
   return prisma.apiToken.update({ where: { id: tokenId }, data: { name }, select: apiTokenSelect });
 }
 
-export async function deleteApiToken(requesterId: string, tokenId: string) {
-  await findManageableTokenOrThrow(requesterId, tokenId);
+export async function deleteApiToken(requesterId: string, accessUserId: string, tokenId: string) {
+  await findManageableTokenOrThrow(requesterId, accessUserId, tokenId);
   await prisma.apiToken.delete({ where: { id: tokenId } });
 }

@@ -168,16 +168,26 @@ npm run format:check  # Prettier (verifica)
 
 - `POST /api/auth/register` e `POST /api/auth/login` → `{ user, token }` (JWT HS256, validade `JWT_EXPIRES_IN`).
 - Rotas protegidas aceitam `Authorization: Bearer <jwt>` **ou** `Authorization: Bearer fb_<api token>`.
-  O hook `authenticate` (`src/plugins/auth.ts`) preenche `request.auth = { userId, method, apiTokenId? }`.
+  O hook `authenticate` (`src/plugins/auth.ts`) preenche `request.auth = { userId, accessUserId, method, apiTokenId? }`.
 - API tokens (`/api/tokens`, CRUD): o valor `fb_...` só é retornado **uma vez**, na criação. No banco fica apenas o
   SHA-256 (`tokenHash`). `lastUsedAt` é atualizado a cada uso. Revogar = `DELETE /api/tokens/:id`.
 - Senhas: `scrypt` com salt (`src/lib/password.ts`).
-- Não há permissões por board ainda: qualquer usuário autenticado acessa todos os boards. Comentários só podem ser
-  editados ou apagados pelo autor.
+- **Permissões por board** (`BoardMember`, papéis `owner`/`member`): só membros veem e alteram um board. Quem cria o board
+  vira `owner`. O hook `enforceBoardAccess` (`src/services/access.ts`, `preHandler` de todas as rotas protegidas) resolve o
+  board do `:id` da rota (board, lista, card, item, comentário, label, campo, template) e dos ids extras (`:labelId`, `:fieldId`,
+  `listId` no body, `boardId` na query) e responde **404** quando o usuário não é membro, para não revelar que o recurso existe.
+  Também exige que `assigneeId`/`onEnterAssigneeId` seja membro do board (agentes sempre podem ser atribuídos).
+  Listagens (`GET /boards`, `/search`, `/users`) filtram com `memberOf(accessUserId)`. **Rota nova com id de outro recurso
+  no body ou na query precisa entrar nesse hook.** Regras de "mesmo board" (labels, mover entre boards) continuam nos services.
+- Membros: `GET/POST /boards/:id/members` (adicionar ou trocar o papel pelo e-mail, só `owner`) e
+  `DELETE /boards/:id/members/:userId` (`owner` remove qualquer um; o membro pode sair). O board sempre mantém um `owner`
+  (`LAST_OWNER`). No frontend: Configurar board → Membros. Testes em `test/access.test.ts`.
+- Comentários só podem ser editados ou apagados pelo autor.
 - **Usuários agentes** (`User.type = agent`, ex.: Claude Agent): não fazem login com senha (o `passwordHash` é inutilizável)
   e se autenticam só com API token. Um usuário **humano** pode listar, criar e revogar tokens de agentes
-  (`?userId=` / `userId` em `/tokens`). Um agente só gerencia os próprios tokens. Use um token de agente no MCP para que as
-  ações apareçam com o selo de agente (`actor.type`, `author.type` e `assignee.type` vêm na API).
+  (`?userId=` / `userId` em `/tokens`). O token de agente guarda quem o criou (`ApiToken.createdById`): o agente age com o
+  acesso a boards desse humano (`request.auth.accessUserId`), e cada humano só vê e revoga os tokens de agente que criou.
+  Um agente só gerencia os próprios tokens. Use um token de agente no MCP para que as ações apareçam com o selo de agente (`actor.type`, `author.type` e `assignee.type` vêm na API).
 
 ### Rotas (prefixo `/api`; lista completa em `/docs`)
 
@@ -185,7 +195,7 @@ npm run format:check  # Prettier (verifica)
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Auth      | `POST /auth/register`, `POST /auth/login`, `GET /auth/me`                                                                                                                           |
 | Tokens    | `GET/POST /tokens` (`userId` opcional para tokens de agente), `PATCH/DELETE /tokens/:id`                                                                                            |
-| Boards    | `GET/POST /boards`, `GET/PATCH /boards/:id`, `POST /boards/:id/archive`, `POST /boards/:id/restore`, `GET /boards/:id/activity?limit&cursor`                                        |
+| Boards    | `GET/POST /boards`, `GET/PATCH /boards/:id`, `POST /boards/:id/archive`, `POST /boards/:id/restore`, `GET /boards/:id/activity?limit&cursor`, `GET/POST /boards/:id/members`, `DELETE /boards/:id/members/:userId`                                        |
 | Lists     | `POST /boards/:id/lists`, `GET /lists/:id`, `PATCH /lists/:id` (título + regras), `PATCH /lists/:id/move`, `POST /lists/:id/archive`, `/restore`                                    |
 | Cards     | `POST /lists/:id/cards`, `GET/PATCH /cards/:id`, `GET /cards/:id/activity`, `PATCH /cards/:id/move`, `POST /cards/:id/archive`, `/restore`, `PUT/DELETE /cards/:id/labels/:labelId` |
 | Labels    | `GET/POST /boards/:id/labels`, `PATCH/DELETE /labels/:id`                                                                                                                           |
@@ -269,7 +279,7 @@ Se você remover os locks, esses testes falham. **Não troque esses locks por ch
 
 - Toda rota declara `params`/`querystring`/`body` com **zod** no `schema` (via `fastify-type-provider-zod`); isso também gera o OpenAPI.
 - Todos os erros saem no formato `{ "error": { "code": "...", "message": "..." } }` (validação inclui `details`).
-  Códigos: `VALIDATION_ERROR` (400), `BAD_REQUEST`/`INVALID_MOVE_TARGET`/`CROSS_BOARD_MOVE`/`INVALID_LABEL`/`INVALID_ASSIGNEE` (400),
+  Códigos: `VALIDATION_ERROR` (400), `BAD_REQUEST`/`INVALID_MOVE_TARGET`/`CROSS_BOARD_MOVE`/`INVALID_LABEL`/`INVALID_ASSIGNEE`/`LAST_OWNER` (400),
   `UNAUTHORIZED` (401), `FORBIDDEN` (403), `NOT_FOUND`/`ROUTE_NOT_FOUND` (404), `CONFLICT`/`EMAIL_TAKEN` (409), `INTERNAL_ERROR` (500).
 - Nos services, lance os helpers de `src/errors.ts` (`notFound('Card')`, `badRequest(msg, code)`, ...) — nunca responda erros manualmente nas rotas.
 
@@ -375,7 +385,7 @@ Segue o padrão **MAJOR.MINOR.PATCH** (ex.: `1.4.2`), comum a todos os projetos:
 
 Ao subir um número, os da direita voltam a zero. A versão é atualizada no mesmo commit que traz a mudança, na `dev`. Mudança só de documentação não sobe versão.
 
-- Onde fica: campo `version` de `backend/package.json`, `frontend/package.json` e `mcp/package.json`, sempre com o mesmo número (hoje `0.2.0`), além de `SERVER_VERSION` em `mcp/src/server.ts` e da versão do OpenAPI em `backend/src/app.ts`. O `frontend/vite.config.ts` injeta essa versão em `import.meta.env.VITE_APP_VERSION`, que aparece ao lado do nome no cabeçalho (`components/AppLayout.tsx`); não escreva a versão à mão no código.
+- Onde fica: campo `version` de `backend/package.json`, `frontend/package.json` e `mcp/package.json`, sempre com o mesmo número (hoje `0.3.0`), além de `SERVER_VERSION` em `mcp/src/server.ts` e da versão do OpenAPI em `backend/src/app.ts`. O `frontend/vite.config.ts` injeta essa versão em `import.meta.env.VITE_APP_VERSION`, que aparece ao lado do nome no cabeçalho (`components/AppLayout.tsx`); não escreva a versão à mão no código.
 
 ## Auditoria de segurança (obrigatória a cada alteração)
 

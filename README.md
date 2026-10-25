@@ -54,6 +54,7 @@ Entre em http://localhost:5150 (ex.: `admin@flowboard.local` / `admin123`) e vá
 Escolha **Claude Agent**, crie um token (ex.: "Claude Code") e copie o valor `fb_...`. Ele só é exibido uma vez.
 As ações feitas com esse token aparecem no histórico em nome do Claude Agent, com o selo **agente**. Se preferir
 que as ações saiam em seu nome, crie o token em "Seus tokens".
+O agente enxerga os mesmos boards que você: o token age com o acesso de quem o criou.
 
 **3. Registre o servidor** (escolha uma opção)
 
@@ -121,6 +122,8 @@ mostra cada passo com o selo **agente**. Se Em Progresso estiver cheia, o claim 
   atribuir a alguém, adicionar etiqueta). O contador mostra `2/3` e fica destacado quando a lista está cheia.
 - **Campos personalizados** e **templates de card**: em **Configurar**, no cabeçalho do board. Os campos aparecem no card e no modal.
   Para usar um template, escolha-o em "Adicionar card".
+- **Membros**: cada board só aparece para os membros dele. Quem cria vira dono e adiciona pessoas pelo e-mail em
+  **Configurar → Membros**.
 - **Filtros**: texto, etiqueta, responsável e "Só meus cards". Ficam na URL, então sobrevivem ao recarregar e dá para compartilhar o link.
 
 Mais detalhes (migrations, convenções, estrutura) em [CLAUDE.md](./CLAUDE.md).

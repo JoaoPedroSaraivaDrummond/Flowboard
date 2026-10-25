@@ -15,7 +15,8 @@ export const tokenRoutes: FastifyPluginAsyncZod = async (app) => {
         querystring: z.object({ userId: z.uuid().optional().describe('Agent user id') }),
       },
     },
-    async (request) => listApiTokens(request.auth.userId, request.query.userId),
+    async (request) =>
+      listApiTokens(request.auth.userId, request.auth.accessUserId, request.query.userId),
   );
 
   app.post(
@@ -31,7 +32,14 @@ export const tokenRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) =>
       reply
         .status(201)
-        .send(await createApiToken(request.auth.userId, request.body.name, request.body.userId)),
+        .send(
+          await createApiToken(
+            request.auth.userId,
+            request.auth.accessUserId,
+            request.body.name,
+            request.body.userId,
+          ),
+        ),
   );
 
   app.patch(
@@ -44,14 +52,20 @@ export const tokenRoutes: FastifyPluginAsyncZod = async (app) => {
         body: tokenBody,
       },
     },
-    async (request) => renameApiToken(request.auth.userId, request.params.id, request.body.name),
+    async (request) =>
+      renameApiToken(
+        request.auth.userId,
+        request.auth.accessUserId,
+        request.params.id,
+        request.body.name,
+      ),
   );
 
   app.delete(
     '/tokens/:id',
     { schema: { tags: ['tokens'], summary: 'Revoke an API token', params: idParams } },
     async (request, reply) => {
-      await deleteApiToken(request.auth.userId, request.params.id);
+      await deleteApiToken(request.auth.userId, request.auth.accessUserId, request.params.id);
       return reply.status(204).send();
     },
   );

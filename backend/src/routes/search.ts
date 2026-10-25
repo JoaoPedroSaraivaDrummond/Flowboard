@@ -19,13 +19,13 @@ export const searchRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) => {
       const { q, boardId, limit } = request.query;
-      return searchCards(q, { boardId, limit });
+      return searchCards(request.auth.accessUserId, q, { boardId, limit });
     },
   );
 
   app.get(
     '/users',
     { schema: { tags: ['users'], summary: 'List users (e.g. to pick an assignee)' } },
-    async () => listUsers(),
+    async (request) => listUsers(request.auth.accessUserId),
   );
 };
